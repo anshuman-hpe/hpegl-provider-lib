@@ -6,10 +6,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
+	"time"
 
 	tokenutil "github.com/hewlettpackard/hpegl-provider-lib/pkg/token/token-util"
 )
@@ -18,11 +19,21 @@ const (
 	retryLimit = 3
 )
 
+type GenerateTokenInput struct {
+	TenantID     string `json:"tenant_id"`
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+	GrantType    string `json:"grant_type"`
+}
+
 type TokenResponse struct {
-	TokenType   string `json:"token_type"`
-	ExpiresIn   int    `json:"expires_in"`
-	AccessToken string `json:"access_token"`
-	Scope       string `json:"scope"`
+	TokenType       string    `json:"token_type"`
+	AccessToken     string    `json:"access_token"`
+	RefreshToken    string    `json:"refresh_token"`
+	Expiry          time.Time `json:"expiry"`
+	ExpiresIn       int       `json:"expires_in"`
+	Scope           string    `json:"scope"`
+	AccessTokenOnly bool      `json:"accessTokenOnly"`
 }
 
 func GenerateToken(
@@ -33,14 +44,27 @@ func GenerateToken(
 	identityServiceURL string,
 	httpClient tokenutil.HttpClient,
 ) (string, error) {
-	params := url.Values{}
-	params.Add("client_id", clientID)
-	params.Add("client_secret", clientSecret)
-	params.Add("grant_type", "client_credentials")
-	params.Add("scope", "hpe-tenant")
+	//params := url.Values{}
+	//params.Add("client_id", clientID)
+	//params.Add("client_secret", clientSecret)
+	//params.Add("grant_type", "client_credentials")
+	//params.Add("scope", "hpe-tenant")
+	params := GenerateTokenInput{
+		TenantID:     tenantID,
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		GrantType:    "client_credentials",
+	}
+	b, err := json.Marshal(params)
+	if err != nil {
+		return "", err
+	}
 
-	url := fmt.Sprintf("%s/v1/token", identityServiceURL)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(params.Encode()))
+	url := fmt.Sprintf("%s/identity/v1/token", identityServiceURL)
+	tflog.Info(ctx, "anshuman, debug_logs")
+	tflog.Info(ctx, string(b))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(string(b)))
+	//req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(params.Encode()))
 	if err != nil {
 		return "", err
 	}
