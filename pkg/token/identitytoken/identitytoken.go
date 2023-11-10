@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"io"
 	"net/http"
 	"strings"
@@ -50,13 +51,13 @@ func GenerateToken(
 		GrantType:    "client_credentials",
 	}
 
-	url := fmt.Sprintf("%s/v1/token", identityServiceURL)
-
+	url := fmt.Sprintf("%s/identity/v1/token", identityServiceURL)
 	b, err := json.Marshal(params)
 	if err != nil {
 		return "", err
 	}
-
+	tflog.Info(ctx, string(b))
+	tflog.Info(ctx, "anshuman, debug_logs")
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(string(b)))
 	if err != nil {
 		return "", err
